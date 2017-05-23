@@ -16,8 +16,6 @@ import com.google.inject.name.Names;
 import com.redhat.bayesian.agent.BayesianAgent;
 import com.redhat.che.keycloak.server.KeycloakHttpJsonRequestFactory;
 
-import org.eclipse.che.api.agent.ExecAgent;
-import org.eclipse.che.api.agent.ExecAgentLauncher;
 import org.eclipse.che.api.agent.LSCSharpAgent;
 import org.eclipse.che.api.agent.LSJsonAgent;
 import org.eclipse.che.api.agent.LSPhpAgent;
@@ -34,6 +32,10 @@ import org.eclipse.che.api.core.rest.CheJsonProvider;
 import org.eclipse.che.api.core.rest.HttpJsonRequestFactory;
 import org.eclipse.che.api.core.rest.MessageBodyAdapter;
 import org.eclipse.che.api.core.rest.MessageBodyAdapterInterceptor;
+import org.eclipse.che.api.factory.server.FactoryAcceptValidator;
+import org.eclipse.che.api.factory.server.FactoryCreateValidator;
+import org.eclipse.che.api.factory.server.FactoryEditValidator;
+import org.eclipse.che.api.factory.server.FactoryParametersResolver;
 import org.eclipse.che.api.machine.shared.Constants;
 import org.eclipse.che.api.user.server.TokenValidator;
 import org.eclipse.che.api.workspace.server.WorkspaceConfigMessageBodyAdapter;
@@ -41,6 +43,7 @@ import org.eclipse.che.api.workspace.server.WorkspaceMessageBodyAdapter;
 import org.eclipse.che.api.workspace.server.stack.StackMessageBodyAdapter;
 import org.eclipse.che.core.db.schema.SchemaInitializer;
 import org.eclipse.che.inject.DynaModule;
+import org.eclipse.che.plugin.github.factory.resolver.GithubFactoryParametersResolver;
 import org.flywaydb.core.internal.util.PlaceholderReplacer;
 
 import javax.sql.DataSource;
@@ -60,6 +63,8 @@ public class WsMasterModule extends AbstractModule {
         install(new org.eclipse.che.api.ssh.server.jpa.SshJpaModule());
         install(new org.eclipse.che.api.machine.server.jpa.MachineJpaModule());
         install(new org.eclipse.che.api.workspace.server.jpa.WorkspaceJpaModule());
+        install(new org.eclipse.che.api.core.jsonrpc.impl.JsonRpcModule());
+        install(new org.eclipse.che.api.core.websocket.impl.WebSocketModule());
 
         // db configuration
         bind(DataSource.class).toProvider(org.eclipse.che.core.db.h2.H2DataSourceProvider.class);
@@ -67,12 +72,23 @@ public class WsMasterModule extends AbstractModule {
         bind(org.eclipse.che.core.db.DBInitializer.class).asEagerSingleton();
         bind(PlaceholderReplacer.class).toProvider(org.eclipse.che.core.db.schema.impl.flyway.PlaceholderReplacerProvider.class);
 
+        //factory
+        bind(FactoryAcceptValidator.class).to(org.eclipse.che.api.factory.server.impl.FactoryAcceptValidatorImpl.class);
+        bind(FactoryCreateValidator.class).to(org.eclipse.che.api.factory.server.impl.FactoryCreateValidatorImpl.class);
+        bind(FactoryEditValidator.class).to(org.eclipse.che.api.factory.server.impl.FactoryEditValidatorImpl.class);
+        bind(org.eclipse.che.api.factory.server.FactoryService.class);
+        install(new org.eclipse.che.api.factory.server.jpa.FactoryJpaModule());
+
+        Multibinder<FactoryParametersResolver> factoryParametersResolverMultibinder =
+                Multibinder.newSetBinder(binder(), FactoryParametersResolver.class);
+        factoryParametersResolverMultibinder.addBinding()
+                                            .to(GithubFactoryParametersResolver.class);
+
         install(new org.eclipse.che.plugin.docker.compose.ComposeModule());
 
         bind(org.eclipse.che.api.user.server.CheUserCreator.class);
 
         bind(TokenValidator.class).to(org.eclipse.che.api.local.DummyTokenValidator.class);
-        bind(HttpJsonRequestFactory.class).to(KeycloakHttpJsonRequestFactory.class);
 
         bind(org.eclipse.che.api.core.rest.ApiInfoService.class);
         bind(org.eclipse.che.api.project.server.template.ProjectTemplateDescriptionLoader.class).asEagerSingleton();
@@ -88,6 +104,7 @@ public class WsMasterModule extends AbstractModule {
         bind(org.eclipse.che.api.workspace.server.TemporaryWorkspaceRemover.class);
         bind(org.eclipse.che.api.workspace.server.WorkspaceService.class);
         bind(org.eclipse.che.api.workspace.server.event.WorkspaceMessenger.class).asEagerSingleton();
+        bind(org.eclipse.che.api.workspace.server.event.WorkspaceJsonRpcMessenger.class).asEagerSingleton();
         bind(org.eclipse.che.plugin.docker.machine.ext.DockerMachineExtServerChecker.class);
         bind(org.eclipse.che.plugin.docker.machine.ext.DockerMachineTerminalChecker.class);
         bind(org.eclipse.che.everrest.EverrestDownloadFileResponseFilter.class);
@@ -96,7 +113,7 @@ public class WsMasterModule extends AbstractModule {
 
         bind(org.eclipse.che.security.oauth.OAuthAuthenticatorProvider.class)
                 .to(org.eclipse.che.security.oauth.OAuthAuthenticatorProviderImpl.class);
-        bind(org.eclipse.che.api.auth.oauth.OAuthTokenProvider.class)
+        bind(org.eclipse.che.security.oauth.shared.OAuthTokenProvider.class)
                 .to(org.eclipse.che.security.oauth.OAuthAuthenticatorTokenProvider.class);
         bind(org.eclipse.che.security.oauth.OAuthAuthenticationService.class);
 
@@ -128,9 +145,9 @@ public class WsMasterModule extends AbstractModule {
         Multibinder<Agent> agents = Multibinder.newSetBinder(binder(), Agent.class);
         agents.addBinding().to(SshAgent.class);
         agents.addBinding().to(UnisonAgent.class);
-        agents.addBinding().to(ExecAgent.class);
+        agents.addBinding().to(org.eclipse.che.api.agent.ExecAgent.class);
+        // agents.addBinding().to(org.eclipse.che.api.agent.TerminalAgent.class);
         agents.addBinding().to(WsAgent.class);
-        agents.addBinding().to(BayesianAgent.class);
         agents.addBinding().to(LSPhpAgent.class);
         agents.addBinding().to(LSPythonAgent.class);
         agents.addBinding().to(LSJsonAgent.class);
@@ -139,11 +156,21 @@ public class WsMasterModule extends AbstractModule {
 
         Multibinder<AgentLauncher> launchers = Multibinder.newSetBinder(binder(), AgentLauncher.class);
         launchers.addBinding().to(WsAgentLauncher.class);
-        launchers.addBinding().to(ExecAgentLauncher.class);
+        launchers.addBinding().to(org.eclipse.che.api.agent.ExecAgentLauncher.class);
+        // launchers.addBinding().to(org.eclipse.che.api.agent.TerminalAgentLauncher.class);
         launchers.addBinding().to(SshAgentLauncher.class);
 
         bindConstant().annotatedWith(Names.named("machine.ws_agent.run_command"))
                       .to("export JPDA_ADDRESS=\"4403\" && ~/che/ws-agent/bin/catalina.sh jpda run");
+        //bindConstant().annotatedWith(Names.named("machine.terminal_agent.run_command"))
+        //              .to("$HOME/che/terminal/che-websocket-terminal " +
+        //                  "-addr :4411 " +
+        //                  "-cmd ${SHELL_INTERPRETER}");
+        //bindConstant().annotatedWith(Names.named("machine.exec_agent.run_command"))
+        //              .to("$HOME/che/exec-agent/che-exec-agent " +
+        //                  "-addr :4412 " +
+        //                  "-cmd ${SHELL_INTERPRETER} " +
+        //                  "-logs-dir $HOME/che/exec-agent/logs");
         bindConstant().annotatedWith(Names.named("machine.terminal_agent.run_command"))
                       .to("$HOME/che/terminal/che-websocket-terminal " +
                           "-addr :4411 " +
@@ -179,7 +206,7 @@ public class WsMasterModule extends AbstractModule {
         requestInjection(interceptor);
         bindInterceptor(subclassesOf(CheJsonProvider.class), names("readFrom"), interceptor);
         bind(org.eclipse.che.api.workspace.server.WorkspaceFilesCleaner.class)
-		.to(org.eclipse.che.plugin.openshift.client.OpenShiftWorkspaceFilesCleaner.class);
+                .to(org.eclipse.che.plugin.docker.machine.cleaner.LocalWorkspaceFilesCleaner.class);
         bind(org.eclipse.che.api.environment.server.InfrastructureProvisioner.class)
                 .to(org.eclipse.che.plugin.docker.machine.local.LocalCheInfrastructureProvisioner.class);
 
@@ -188,5 +215,15 @@ public class WsMasterModule extends AbstractModule {
         bind(org.eclipse.che.api.system.server.SystemEventsWebsocketBroadcaster.class).asEagerSingleton();
 
         install(new org.eclipse.che.plugin.docker.machine.dns.DnsResolversModule());
+
+        //bind(org.eclipse.che.api.agent.server.filters.AddExecAgentInWorkspaceFilter.class);
+        //bind(org.eclipse.che.api.agent.server.filters.AddExecAgentInStackFilter.class);
+
+
+        //rh-che
+        bind(HttpJsonRequestFactory.class).to(KeycloakHttpJsonRequestFactory.class);
+        agents.addBinding().to(BayesianAgent.class);
+        bind(org.eclipse.che.api.workspace.server.WorkspaceFilesCleaner.class).to(org.eclipse.che.plugin.openshift.client.OpenShiftWorkspaceFilesCleaner.class);
+
     }
 }
