@@ -14,18 +14,20 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.eclipse.che.api.languageserver.exception.LanguageServerException;
 import org.eclipse.che.api.languageserver.launcher.LanguageServerLauncherTemplate;
-import org.eclipse.che.api.languageserver.shared.model.LanguageDescription;
+import org.eclipse.che.api.languageserver.registry.DocumentFilter;
+import org.eclipse.che.api.languageserver.registry.LanguageServerDescription;
 import org.eclipse.che.plugin.languageserver.bayesian.BayesianLanguageServerModule;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import static java.util.Arrays.asList;
+import java.util.Arrays;
 
 /**
  * @author Evgen Vidolob
@@ -34,17 +36,14 @@ import static java.util.Arrays.asList;
 @Singleton
 public class BayesianLanguageServerLauncher extends LanguageServerLauncherTemplate {
 
-    private final Path launchScript;
+    private static final String                    REGEX       = "(package\\.json|pom\\.xml|requirements\\.txt)";
+    private static final LanguageServerDescription DESCRIPTION = createServerDescription();
 
+    private final Path                             launchScript;
 
     @Inject
     public BayesianLanguageServerLauncher() {
         launchScript = Paths.get(System.getenv("HOME"), "che/ls-bayesian/launch.sh");
-    }
-
-    @Override
-    public String getLanguageId() {
-        return BayesianLanguageServerModule.LANGUAGE_ID;
     }
 
     @Override
@@ -62,6 +61,11 @@ public class BayesianLanguageServerLauncher extends LanguageServerLauncherTempla
 
     protected Process startLanguageServerProcess(String projectPath) throws LanguageServerException {
         ProcessBuilder processBuilder = new ProcessBuilder(launchScript.toString());
+        // dev: inject your keycloak token here: (retrieve it from openshift.io localStorage.getItem("auth_token"))
+        // ProcessBuilder processBuilder = new ProcessBuilder("/bin/bash", //
+        //                                                    "-c", //
+        //                                                    "export RECOMMENDER_API_TOKEN=xxx && " + //
+        //                                                        launchScript.toString());
         processBuilder.redirectInput(ProcessBuilder.Redirect.PIPE);
         processBuilder.redirectOutput(ProcessBuilder.Redirect.PIPE);
         processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT);
@@ -70,6 +74,21 @@ public class BayesianLanguageServerLauncher extends LanguageServerLauncherTempla
         } catch (IOException e) {
             throw new LanguageServerException("Can't start Bayesian language server", e);
         }
+    }
+
+    public LanguageServerDescription getDescription() {
+        return DESCRIPTION;
+    }
+
+    private static LanguageServerDescription createServerDescription() {
+        return new LanguageServerDescription("org.eclipse.che.plugin.bayesian.languageserver", //
+                                             null, //
+                                             Arrays.asList( //
+                                             new DocumentFilter(BayesianLanguageServerModule.LANGUAGE_ID, //
+                                                                REGEX, //
+                                                                null) //
+                                             ) //
+        );
     }
 
 }

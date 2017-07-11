@@ -31,7 +31,7 @@ public class BayesianLanguageServerModule extends AbstractModule {
 
     public static final String   LANGUAGE_ID = "bayesian";
 
-    public static final String[] FILE_NAMES  = new String[]{"package\\.json", "pom\\.xml", "requirements\\.txt"};
+    public static final String[] FILE_NAMES  = new String[]{"package.json", "pom.xml", "requirements.txt"};
 
 	@Override
 	protected void configure() {
