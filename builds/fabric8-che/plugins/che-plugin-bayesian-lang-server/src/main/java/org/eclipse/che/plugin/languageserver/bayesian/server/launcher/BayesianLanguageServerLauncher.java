@@ -12,16 +12,16 @@ package org.eclipse.che.plugin.languageserver.bayesian.server.launcher;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+
 import org.eclipse.che.api.languageserver.exception.LanguageServerException;
 import org.eclipse.che.api.languageserver.launcher.LanguageServerLauncherTemplate;
 import org.eclipse.che.api.languageserver.registry.DocumentFilter;
 import org.eclipse.che.api.languageserver.registry.LanguageServerDescription;
+import org.eclipse.che.plugin.json.inject.JsonModule;
 import org.eclipse.che.plugin.languageserver.bayesian.BayesianLanguageServerModule;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageServer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -36,7 +36,6 @@ import java.util.Arrays;
 @Singleton
 public class BayesianLanguageServerLauncher extends LanguageServerLauncherTemplate {
 
-    private static final String                    REGEX       = "(package\\.json|pom\\.xml|requirements\\.txt)";
     private static final LanguageServerDescription DESCRIPTION = createServerDescription();
 
     private final Path                             launchScript;
@@ -81,13 +80,16 @@ public class BayesianLanguageServerLauncher extends LanguageServerLauncherTempla
     }
 
     private static LanguageServerDescription createServerDescription() {
-        return new LanguageServerDescription("org.eclipse.che.plugin.bayesian.languageserver", //
-                                             null, //
-                                             Arrays.asList( //
-                                             new DocumentFilter(BayesianLanguageServerModule.LANGUAGE_ID, //
-                                                                REGEX, //
-                                                                null) //
-                                             ) //
+        return new LanguageServerDescription("org.eclipse.che.plugin.bayesian.languageserver",//
+                                             null,//
+                                             Arrays.asList(new DocumentFilter(BayesianLanguageServerModule.TXT_LANGUAGE_ID,//
+                                                                              "requirements\\.txt",//
+                                                                              null),//
+                                                           new DocumentFilter(JsonModule.LANGUAGE_ID,//
+                                                                              "package\\.json",//
+                                                                              null)//
+                                             // TODO pom.xml
+                                             )//
         );
     }
 
