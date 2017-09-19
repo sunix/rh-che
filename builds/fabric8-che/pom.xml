@@ -30,6 +30,7 @@
     </modules>
     <properties>
         <keycloak.version>2.5.0.Final</keycloak.version>
+        <logstash.logback.encoder.version>4.11</logstash.logback.encoder.version>
         <redhat.che.version>1.0.0-SNAPSHOT</redhat.che.version>
         <rh.che.plugins.version>1.0.0-SNAPSHOT</rh.che.plugins.version>
         <withoutDashboard>false</withoutDashboard>
@@ -138,6 +139,11 @@
                 <artifactId>user-auth-valve</artifactId>
                 <version>${redhat.che.version}</version>
                 <type>jar</type>
+            </dependency>
+            <dependency>
+                <groupId>net.logstash.logback</groupId>
+                <artifactId>logstash-logback-encoder</artifactId>
+                <version>${logstash.logback.encoder.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.tomcat</groupId>

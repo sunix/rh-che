@@ -31,6 +31,19 @@
                 <include>com.redhat.che:fabric8-ide-assembly-wsagent-server</include>
             </includes>
         </dependencySet>
+        <dependencySet>
+            <useProjectArtifact>false</useProjectArtifact>
+            <unpack>false</unpack>
+            <outputDirectory>tomcat/lib</outputDirectory>
+            <includes>
+                <include>net.logstash.logback:logstash-logback-encoder</include>
+                <include>ch.qos.logback:logback-classic</include>
+                <include>org.slf4j:slf4j-api</include>
+                <include>com.fasterxml.jackson.core:jackson-annotations</include>
+                <include>com.fasterxml.jackson.core:jackson-core</include>
+                <include>com.fasterxml.jackson.core:jackson-databind</include>
+            </includes>
+        </dependencySet>
     </dependencySets>
     <fileSets>
         <fileSet>
@@ -44,15 +57,24 @@
                 <exclude>**/tomcat/webapps/swagger.war</exclude>
                 <exclude>**/tomcat/webapps/docs.war</exclude>
                 <exclude>**/stacks/stacks.json</exclude>
+                <exclude>**/tomcat/conf/logback.xml</exclude>
             </excludes>
         </fileSet>
         <fileSet>
             <directory>${project.build.directory}/keycloak/</directory>
             <outputDirectory>tomcat/lib</outputDirectory>
+            <excludes>
+                <!-- avoid conflicts with jackson version used in Che -->
+                <exclude>jackson*.jar</exclude>
+            </excludes>
         </fileSet>
         <fileSet>
             <directory>${project.build.directory}/stacks/</directory>
             <outputDirectory>stacks/</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/assembly/logback/</directory>
+            <outputDirectory>tomcat/conf</outputDirectory>
         </fileSet>
     </fileSets>
 </component>

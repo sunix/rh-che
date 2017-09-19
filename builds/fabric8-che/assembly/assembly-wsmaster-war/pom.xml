@@ -60,8 +60,33 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.tomcat</groupId>
             <artifactId>tomcat-catalina</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -86,6 +111,14 @@
                             <artifactId>assembly-wsmaster-war</artifactId>
                             <type>war</type>
                             <excludes>
+                                <!-- these jars that are already in the tomcat root lib folder for json logback encoder usage -->
+                                <exclude>WEB-INF/lib/logback-classic-${ch.qos.logback.version}.jar</exclude>
+                                <exclude>WEB-INF/lib/logback-core-${ch.qos.logback.version}.jar</exclude>
+                                <exclude>WEB-INF/lib/slf4j-api-${org.slf4j.version}.jar</exclude>
+                                <exclude>WEB-INF/lib/jackson-core-${com.fasterxml.jackson.core.version}.jar</exclude>
+                                <exclude>WEB-INF/lib/jackson-databind-${com.fasterxml.jackson.core.version}.jar</exclude>
+                                <exclude>WEB-INF/lib/jackson-annotations-${com.fasterxml.jackson.core.version}.jar</exclude>
+                                <!-- end exclude for json logback encoder -->
                                 <exclude>WEB-INF/lib/che-core-ide-stacks-${che.version}.jar</exclude>
                                 <exclude>WEB-INF/classes/che-in-che.json</exclude>
                             </excludes>
